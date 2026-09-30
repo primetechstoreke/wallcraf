@@ -142,7 +142,7 @@
 
     var f = document.createElement("form");
     f.method = "POST";
-    f.action = "https://formsubmit.co/" + EMAIL;
+    f.action = "https://formsubmit.co/ndiritugichuhi97@gmail.com";
     f.target = frame.name;
     f.style.display = "none";
     Object.keys(payload).forEach(function (k) {
