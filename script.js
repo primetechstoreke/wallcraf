@@ -2,8 +2,7 @@
   "use strict";
 
   var EMAIL = "easlum97@gmail.com";
-  var ENDPOINT = "https://formsubmit.co/ajax/" + EMAIL;
-  var KEY = "wallcrafted_orders";
+    var KEY = "wallcrafted_orders";
   var STATUSES = ["New", "In progress", "Ready", "Done"];
 
   var FIELDS = [
@@ -20,7 +19,7 @@
   var list = document.getElementById("orderList");
   var count = document.getElementById("count");
   var msg = document.getElementById("msg");
-  var saveBtn = document.getElementById("saveBtn"); 
+  var saveBtn = document.getElementById("saveBtn");
   var orders = load();
 
   function load() {
@@ -123,30 +122,49 @@
 
     saveBtn.disabled = true;
     say("Order saved. Sending to email...", "");
-    fetch(ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Accept": "application/json" },
-      body: JSON.stringify(payload)
-    })
-      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
-      .then(function (res) {
-        if (res.ok && String(res.body.success) !== "false") {
-          say("Order saved and emailed to " + EMAIL + ".", "ok");
-        } else {
-          say("Order saved, but the email was not sent. " + (res.body.message || ""), "warn");
-        }
-      })
-      .catch(function () {
-        say("Order saved on this device, but the email failed. Check your connection or that the site is hosted online.", "warn");
-      })
-      .then(function () {
-        saveBtn.disabled = false;
-        form.reset();
-        form.orderDate.value = today();
-        form.quantity.value = 1;
-        form.name.focus();
-      });
+    sendEmail(payload, function () {
+      say("Order saved and submitted to " + EMAIL + ". If this is your first order, activate FormSubmit from the email it sends you.", "ok");
+      saveBtn.disabled = false;
+      form.reset();
+      form.orderDate.value = today();
+      form.quantity.value = 1;
+      form.name.focus();
+    });
   });
+
+  // Sends the order with a normal (hidden) form post into a hidden iframe.
+  // This avoids the cross-origin errors that fetch() can hit.
+  function sendEmail(payload, done) {
+    var frame = document.createElement("iframe");
+    frame.name = "fs_frame_" + Date.now();
+    frame.style.display = "none";
+    document.body.appendChild(frame);
+
+    var f = document.createElement("form");
+    f.method = "POST";
+    f.action = "https://formsubmit.co/" + EMAIL;
+    f.target = frame.name;
+    f.style.display = "none";
+    Object.keys(payload).forEach(function (k) {
+      var i = document.createElement("input");
+      i.type = "hidden";
+      i.name = k;
+      i.value = payload[k];
+      f.appendChild(i);
+    });
+    document.body.appendChild(f);
+
+    var finished = false;
+    function finish() {
+      if (finished) return;
+      finished = true;
+      setTimeout(function () { f.remove(); frame.remove(); }, 500);
+      done();
+    }
+    frame.addEventListener("load", finish);
+    setTimeout(finish, 8000);
+    f.submit();
+  }
 
   form.addEventListener("input", function (e) { e.target.classList.remove("invalid"); });
 
