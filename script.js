@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  var EMAIL = "ndiritugichuhi97@gmail.com";
+  var EMAIL = "";
     var KEY = "wallcrafted_orders";
   var STATUSES = ["New", "In progress", "Ready", "Done"];
 
