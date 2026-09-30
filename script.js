@@ -1,9 +1,11 @@
 (function () {
   "use strict";
 
-  var EMAIL = "";
-    var KEY = "wallcrafted_orders";
-  var STATUSES = ["New", "In progress", "Ready", "Done"];
+  var EMAIL = "easlum97@gmail.com";
+  // Paste your Web3Forms access key here (get it free at https://web3forms.com)
+  var ACCESS_KEY = "1b837676-7676-4ada-8465-3c865a055b20";
+    var KEY = "wallcrafted_orders"; 
+  var STATUSES = ["New", "In progress", "Ready", "Done"]; 
 
   var FIELDS = [
     ["name", "Name"], ["phone", "Phone"], ["email", "Email"], ["orderDate", "Order date"],
@@ -106,65 +108,44 @@
 
     var order = { id: Date.now(), status: "New" };
     FIELDS.forEach(function (f) { order[f[0]] = form[f[0]].value.trim(); });
-
     orders.push(order);
     persist();
     render();
 
-    // Build the email payload (readable labels)
     var payload = {
-      _subject: "New WallCrafted order: " + order.name + " - " + order.design,
-      _template: "table",
-      _captcha: "false"
+      access_key: ACCESS_KEY,
+      subject: "New WallCrafted order: " + order.name + " - " + order.design,
+      from_name: "WallCrafted Order Log"
     };
     FIELDS.forEach(function (f) { payload[f[1]] = order[f[0]] || "-"; });
-    if (order.email) payload._replyto = order.email;
+    if (order.email) payload.email = order.email; // lets you reply straight to the customer
 
     saveBtn.disabled = true;
     say("Order saved. Sending to email...", "");
-    sendEmail(payload, function () {
-      say("Order saved and submitted to " + EMAIL + ". If this is your first order, activate FormSubmit from the email it sends you.", "ok");
-      saveBtn.disabled = false;
-      form.reset();
-      form.orderDate.value = today();
-      form.quantity.value = 1;
-      form.name.focus();
-    });
+    fetch("https://api.web3forms.com/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify(payload)
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (res.success) {
+          say("Order saved and emailed to " + EMAIL + ".", "ok");
+        } else {
+          say("Order saved, but the email was not sent: " + (res.message || "unknown error"), "warn");
+        }
+      })
+      .catch(function () {
+        say("Order saved on this device, but the email could not be sent. Check your connection.", "warn");
+      })
+      .then(function () {
+        saveBtn.disabled = false;
+        form.reset();
+        form.orderDate.value = today();
+        form.quantity.value = 1;
+        form.name.focus();
+      });
   });
-
-  // Sends the order with a normal (hidden) form post into a hidden iframe.
-  // This avoids the cross-origin errors that fetch() can hit.
-  function sendEmail(payload, done) {
-    var frame = document.createElement("iframe");
-    frame.name = "fs_frame_" + Date.now();
-    frame.style.display = "none";
-    document.body.appendChild(frame);
-
-    var f = document.createElement("form");
-    f.method = "POST";
-    f.action = "https://formsubmit.co/ndiritugichuhi97@gmail.com";
-    f.target = frame.name;
-    f.style.display = "none";
-    Object.keys(payload).forEach(function (k) {
-      var i = document.createElement("input");
-      i.type = "hidden";
-      i.name = k;
-      i.value = payload[k];
-      f.appendChild(i);
-    });
-    document.body.appendChild(f);
-
-    var finished = false;
-    function finish() {
-      if (finished) return;
-      finished = true;
-      setTimeout(function () { f.remove(); frame.remove(); }, 500);
-      done();
-    }
-    frame.addEventListener("load", finish);
-    setTimeout(finish, 8000);
-    f.submit();
-  }
 
   form.addEventListener("input", function (e) { e.target.classList.remove("invalid"); });
 
